@@ -1,4 +1,4 @@
-package main
+package wikicrawl
 
 import (
   "fmt"
@@ -11,6 +11,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+const ApiRoot string = "https://en.wikipedia.org/w/api.php"
+
+
 type WikiParams struct {
 	Format string
 	Action string
@@ -18,7 +21,7 @@ type WikiParams struct {
 	Prop string
 }
 
-func randWikiUrl() *url.URL {
+func randWikiUrl(output chan *url.URL) {
 	// Keep retrying until find non-disambiguation page
 	for {
 		redirectResponse, _ := goreq.Request{
@@ -27,15 +30,20 @@ func randWikiUrl() *url.URL {
 		// Obtain the random url from the redirect's location header
 		redirectUrl, _ := redirectResponse.Location()
 		if !strings.Contains(strings.ToLower(redirectUrl.String()), "disambiguation") {
-			return redirectUrl
+			output <- redirectUrl
 		}
 	}
 }
 
 func main() {
 
-	startUrl := randWikiUrl()
+	urlChannel := make(chan *url.URL, 1)
+	go randWikiUrl(urlChannel)
+	startUrl := <- urlChannel
 	fmt.Println("random is", startUrl)
+
+	startPage := WikiPage{startUrl}
+	fmt.Println(startPage)
 
 	return
 
@@ -45,9 +53,9 @@ func main() {
 		Page: "akihabara",
 		Prop: "text",
 	}
-
 	
-		
+	
+	
 	req := goreq.Request{
 		Uri: "https://en.wikipedia.org/w/api.php",
 		QueryString: params,
