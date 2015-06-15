@@ -3,7 +3,7 @@ package wikicrawl
 import (
   "fmt"
 	"strings"
-	"net/url"
+	//"net/url"
 	"encoding/json"
 	"io/ioutil"
 	"golang.org/x/net/html"
@@ -12,7 +12,7 @@ import (
 )
 
 const ApiRoot string = "https://en.wikipedia.org/w/api.php"
-
+const WikiContentRoot string = "https://en.wikipedia.org/wiki/"
 
 type WikiParams struct {
 	Format string
@@ -21,28 +21,27 @@ type WikiParams struct {
 	Prop string
 }
 
-func randWikiUrl(output chan *url.URL) {
+func randWikiUrl(output chan *WikiPage) {
 	// Keep retrying until find non-disambiguation page
 	for {
 		redirectResponse, _ := goreq.Request{
-			Uri: "https://en.wikipedia.org/wiki/Special:Random",
+			Uri: WikiContentRoot + "Special:Random",
 		}.Do()
 		// Obtain the random url from the redirect's location header
 		redirectUrl, _ := redirectResponse.Location()
-		if !strings.Contains(strings.ToLower(redirectUrl.String()), "disambiguation") {
-			output <- redirectUrl
+		redirectUrlString := redirectUrl.String()
+		if !strings.Contains(strings.ToLower(redirectUrlString), "disambiguation") {
+			randomTitle := strings.Replace(redirectUrlString, WikiContentRoot, "", 1)
+			output <- NewWikiPage(randomTitle)
 		}
 	}
 }
 
 func main() {
-
-	urlChannel := make(chan *url.URL, 1)
-	go randWikiUrl(urlChannel)
-	startUrl := <- urlChannel
-	fmt.Println("random is", startUrl)
-
-	startPage := WikiPage{startUrl}
+	return
+	wikipageChannel := make(chan *WikiPage, 1)
+	go randWikiUrl(wikipageChannel)
+	startPage := <- wikipageChannel
 	fmt.Println(startPage)
 
 	return
