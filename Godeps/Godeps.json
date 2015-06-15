@@ -1,0 +1,23 @@
+{
+	"ImportPath": "github.com/MaxwellPayne/go-wikicrawl",
+	"GoVersion": "go1.4.2",
+	"Deps": [
+		{
+			"ImportPath": "github.com/PuerkitoBio/goquery",
+			"Comment": "v0.3.2-79-gb444041",
+			"Rev": "b4440419d81240f8451a505b2f806c853bc2befc"
+		},
+		{
+			"ImportPath": "github.com/andybalholm/cascadia",
+			"Rev": "6122e68c2642b7b75c538a63b15168c6c80fb757"
+		},
+		{
+			"ImportPath": "github.com/franela/goreq",
+			"Rev": "afbd11f34269f3f4e22dc2c6037d5f49a3fc8c72"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "3cffabab72adf04f8e3b01c5baf775361837b5fe"
+		}
+	]
+}
