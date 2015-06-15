@@ -21,6 +21,8 @@ type WikiParams struct {
 	Prop string
 }
 
+
+
 func randWikiUrl(output chan *WikiPage) {
 	// Keep retrying until find non-disambiguation page
 	for {
@@ -37,12 +39,17 @@ func randWikiUrl(output chan *WikiPage) {
 	}
 }
 
+func Run() {
+	main()
+}
+
 func main() {
-	return
+
 	wikipageChannel := make(chan *WikiPage, 1)
 	go randWikiUrl(wikipageChannel)
 	startPage := <- wikipageChannel
 	fmt.Println(startPage)
+	fmt.Println(startPage.Title())
 
 	return
 

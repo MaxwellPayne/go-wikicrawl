@@ -2,6 +2,7 @@ package wikicrawl
 
 import (
 	"net/url"
+	"strings"
 )
 
 type WikiPage struct {
@@ -9,7 +10,7 @@ type WikiPage struct {
 }
 
 func NewWikiPage(title string) *WikiPage {
-	rawUrl := ApiRoot
+	rawUrl := WikiContentRoot + title
 	parsedUrl, _ := url.Parse(rawUrl)
 	
 	page := WikiPage{
@@ -18,6 +19,11 @@ func NewWikiPage(title string) *WikiPage {
 	return &page
 }
 
-func NormalizeTitle(title string) string {
-	return "hi"
+
+
+func (wikiPage *WikiPage) Title() string {
+	title, _ := url.QueryUnescape(wikiPage.FormattedUrl.String())
+	title = strings.Replace(title, WikiContentRoot, "", 1)
+	title = strings.Replace(title, "_", " ", -1)
+	return title
 }
