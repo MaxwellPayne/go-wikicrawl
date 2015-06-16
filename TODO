@@ -1,1 +1,2 @@
 - prevent Beginning of article (or, ANCIENT_GREEK ...) rest of article scenario
+- modify blacklist regex to watch for "List%20of..something" list article encodings
