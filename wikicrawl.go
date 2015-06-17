@@ -20,6 +20,34 @@ type WikiParams struct {
 	Prop string
 }
 
+func sanitize(page *WikiPage, document *goquery.Document) *goquery.Document {
+	// remove all tables
+	document.Find("table").Remove()
+	// remove table of contents
+	document.Find("#toc").Remove()
+	// remove side pictures with captions
+	document.Find("div.thumb.tright").Remove()
+	// tear out spans
+	document.Find("span").Remove()
+	// tear out smalls (to my knowledge just the little 'listen to this' icons)
+	document.Find("small").Remove()
+	// tear out hatnotes, italicized blocks of disclaimers that come before real body
+	document.Find("div.hatnote").Remove()
+
+	
+	html, _ := document.Html()
+
+	parensReg := regexp.MustCompile(`<b>` + page.Title() + `</b> (\(.+?\))`)
+	if evilParensMatch := parensReg.FindStringSubmatch(html); evilParensMatch != nil {
+		// found an undesireable beginning of article paren match
+		fmt.Println("FOUND EVIL")
+		evilSubstring := evilParensMatch[1]
+		html = strings.Replace(html, evilSubstring, "", 1)
+		document, _ = goquery.NewDocumentFromReader(strings.NewReader(html))
+	}
+	return document
+}
+
 func nextPage(currentPage *WikiPage, pageChannel chan *WikiPage) {
 	for {	
 		// Go to the next page
@@ -57,7 +85,11 @@ func nextPage(currentPage *WikiPage, pageChannel chan *WikiPage) {
 						pageChannel <- NewWikiPage(redirectTitle)
 						return
 					}
-					anchors := document.Find("p").Find("a")
+
+					document = sanitize(currentPage, document)
+
+
+					anchors := document.Find("a")
 					// search for anchors between <p> tags
 					for i := range anchors.Nodes {
 						if href, exists := anchors.Eq(i).Attr("href"); exists {
@@ -91,7 +123,7 @@ func randWikiUrl(output chan *WikiPage) {
 		// Obtain the random url from the redirect's location header
 		redirectUrl, _ := redirectResponse.Location()
 		redirectUrlString := redirectUrl.String()
-		blacklistedRegex := regexp.MustCompile("(?i:(?:disambiguation)|(?:list_of|list of))")
+		blacklistedRegex := regexp.MustCompile("(?i:(?:disambiguation)|(?:list(?: |_|%20)of))")
 		if blacklistedRegex.Find([]byte(redirectUrlString)) == nil {
 			// not a blacklisted page
 			randomTitle := strings.Replace(redirectUrlString, WikiContentRoot, "", 1)
@@ -117,8 +149,6 @@ func Crawl(startPage *WikiPage, resultsChannel chan CrawlResult) {
 		// Go to the next page
 		go nextPage(currentPage, nextPageChan)
 		currentPage = <- nextPageChan
-		a, b := visited[currentPage.Title()]
-		fmt.Printf("Value: %s, hasKey %s\n", a, b)
 		if _, hasKey := visited[currentPage.Title()]; hasKey {
 			// already been here
 			fmt.Println("already been here")
@@ -141,6 +171,8 @@ func main() {
 	fmt.Println(startPage)
 	fmt.Println(startPage.Title())
 
+	//startPage = NewWikiPage("Awareness")
+	
 	resultsChan := make(chan CrawlResult)
 	go Crawl(startPage, resultsChan)
 	fmt.Println("Done!", <- resultsChan)
