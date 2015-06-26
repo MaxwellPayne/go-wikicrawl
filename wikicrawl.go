@@ -27,24 +27,37 @@ func sanitize(page *WikiPage, document *goquery.Document) *goquery.Document {
 	document.Find("#toc").Remove()
 	// remove side pictures with captions
 	document.Find("div.thumb.tright").Remove()
-	// tear out spans
+  // remove crappy paragraph that surrounds coordinates BEFORE removing all spans
+  document.Find("#coordinates").ParentsFiltered("p").Remove()
+  // tear out spans
 	document.Find("span").Remove()
 	// tear out smalls (to my knowledge just the little 'listen to this' icons)
 	document.Find("small").Remove()
 	// tear out hatnotes, italicized blocks of disclaimers that come before real body
 	document.Find("div.hatnote").Remove()
 
-	
 	html, _ := document.Html()
 
-	parensReg := regexp.MustCompile(`<b>` + page.Title() + `</b> (\(.+?\))`)
-	if evilParensMatch := parensReg.FindStringSubmatch(html); evilParensMatch != nil {
-		// found an undesireable beginning of article paren match
-		fmt.Println("FOUND EVIL")
-		evilSubstring := evilParensMatch[1]
-		html = strings.Replace(html, evilSubstring, "", 1)
-		document, _ = goquery.NewDocumentFromReader(strings.NewReader(html))
+	firstParagraph := regexp.MustCompile(`(?i)(<p.+?</p>)`).FindStringSubmatch(html)[1]
+	var repairedFirstParagraph string = firstParagraph
+
+  // remove parens really early in the first paragraph
+	earlyParensReg := regexp.MustCompile(`<b>` + page.Title() + `</b> (\(.+?\))`)
+
+  // DEPRECATED - remove parens that are immediately proceeded by a language link e.g. Helston (Cornish: Hellys)
+  //languageParensReg := regexp.MustCompile(`(?i)(<a.+?href="/wiki/[a-z_]+?_language".+?</a>)`)
+
+  // solves the Ancient_Greek parentheses problem in the first paragraph
+  languageParensReg := regexp.MustCompile(`(?i)(\(<a.+?\))`)
+
+  for _, pattern := range []regexp.Regexp{*earlyParensReg, *languageParensReg} {
+		repairedFirstParagraph = pattern.ReplaceAllLiteralString(repairedFirstParagraph, "")
 	}
+  
+  
+	html = strings.Replace(html, firstParagraph, repairedFirstParagraph, 1)
+	
+	document, _ = goquery.NewDocumentFromReader(strings.NewReader(html))
 	return document
 }
 
@@ -89,7 +102,7 @@ func nextPage(currentPage *WikiPage, pageChannel chan *WikiPage) {
 					document = sanitize(currentPage, document)
 
 
-					anchors := document.Find("a")
+					anchors := document.Find("p").Find("a")
 					// search for anchors between <p> tags
 					for i := range anchors.Nodes {
 						if href, exists := anchors.Eq(i).Attr("href"); exists {
@@ -171,7 +184,7 @@ func main() {
 	fmt.Println(startPage)
 	fmt.Println(startPage.Title())
 
-	//startPage = NewWikiPage("Awareness")
+	//startPage = NewWikiPage("Helston")
 	
 	resultsChan := make(chan CrawlResult)
 	go Crawl(startPage, resultsChan)
